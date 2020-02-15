@@ -7,9 +7,16 @@ To incorporate this add-on widget simply import the module and place as many gau
 Because object-oriented programming was used, this code is versatile in handling the multiplte gauge instances.
 
 ```python
-import 
+import tkinter as tk
+import gaugechart
+import random
 
-def foo():
-  return None
+root = tk.Tk()
 
+gaugeFrame = tk.Frame(root)
+gaugeFrame.pack(side=tk.RIGHT)
+myGauge = gaugeApp(gaugeFrame, 0, 100, "speed")
+root.after(2000,lambda: mygauge1.set_dial( random.randint(0,90) ))
+
+root.mainloop()
 ```
