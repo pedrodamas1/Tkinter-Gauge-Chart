@@ -1,5 +1,5 @@
 import tkinter as tk 
-from gaugechart import *
+from tkGauge import *
 import random
 
 # Create a tkinter root
