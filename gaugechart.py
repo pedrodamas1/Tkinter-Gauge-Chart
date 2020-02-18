@@ -4,86 +4,180 @@ import numpy as np
 import random
 
 
-class gaugeApp:
+class GaugeWidget:
+	'''
+	A gauge chart widget for tkinter projects. Gauge charts have the following properties:
 
-	def __init__(self, frame, min, max, title):
-		self.img = ImageTk.PhotoImage(file='Images/template.png') 				# Load the background image
-		self.width, self.height = self.img.width(), self.img.height()							# Get the width and height
-		self.title = title
-		self.frame = frame
-		self.make_gauge()
+	Attributes:
+		master: A tkinter widget class (root, frame, or labelframe) where the gauge will be placed.
+	Optional:
+		Vmin: An int to use as the minimum value on the gauge chart (default is 0).
+		Vmax: An int to use as the minimum value on the gauge chart (default is 90).
+		title: A string to use as label to the gauge chart.
+		size: An int to  (Default is 300)
+		value: A float that holds the value of the gauge dial (default is 0, or min).
+	'''
+
+	def __init__(self, master, *args, **kwargs):
+		'''
+		Initialize the gauge
+		'''
+
+		########################################################################## BACKGROUND IMAGE
+
+		# Load the image for the background
+		image = Image.open('Images/template.png')
+		# Get the width and height of the original image
+		width, height = image.size
+
+		########################################################################## KWARGS VARIABLES	
+
+		# Tkinter widget where the gauge chart will be placed
+		self.master  = master
+		# Minimum value for the chart
+		self.Vmin = kwargs.pop('Vmin', 0)
+		# Maximum value for the chart
+		self.Vmax = kwargs.pop('Vmax', 90)
+		# Title for the chart
+		self.title = kwargs.pop('title', '')
+		# Size for the chart
+		size = kwargs.pop('size', width)
+		# Initial value for the dial
+		self.value = kwargs.pop('value', self.Vmin)
+
+		########################################################################## IMAGE RESIZING
+
+		# Load the background image for the gauge chart
+		image = image.resize((size, size), Image.ANTIALIAS)
+		# Load the image as a tkinter object
+		self.img = ImageTk.PhotoImage(image)
+		# Get the centre position of the background image
+		self.x, self.y = size/2, size/2
+		# Define the dial length
+		self.dial_length = int(0.3*size)
+
+		########################################################################## CREATE CANVAS AND CHART
+
+		# Create the canvas, for the gauge
+		self.canvas = tk.Canvas(self.master, 
+			width=size, 
+			height=size)
+		# Pack the canvas
+		self.canvas.pack()
+		# Make the chart
+		self.make_chart(self.canvas, 
+			self.x, 
+			self.y)
 
 
-	def polar2cartesian(self, theta):
+	def make_chart(self, master, x1, y1):
+		'''
+		Assembles the elements in the gauge chart.
+		Returns: None
+		'''
+
+		# Load the image on the canvas
+		master.create_image(x1, y1, 
+			image=self.img)
+		# Font for text
+		font = ("Purisa", 12)
+
+		# Circle at the centre of the gauge
+		master.create_oval(x1-10, y1-10, x1+10, y1+10, 
+			fill='red',
+			width=3)
+
+		# Title for the gauge
+		master.create_text(x1, y1+30, 
+			fill="white", 
+			font=font, 
+			text=self.title)
+
+		# Background for the value text box
+		master.create_rectangle(x1-20, y1+40, x1+20, y1+60, 
+			fill='black')
+
+		# Value of the dial
+		self.value_lbl = master.create_text(x1, y1+50, 
+			fill="white", 
+			font=font, 
+			text=self.value)
+
+		# Numbers circling the chart
+		for i in np.linspace(self.Vmin, self.Vmax, num=10): 	
+			x2, y2 = self.coords(self.map(i))
+			master.create_text(x2, y2, 
+				fill="white", 
+				font=font, 
+				text=int(i))
+
+		# Make the line for the dial
+		x2, y2 = self.coords(self.map( self.value ))
+		self.line = master.create_line(x1, y1, x2, y2, 
+			fill="red", 
+			width=3)
+
+		return None
+
+
+	def coords(self, theta):
 		'''
 		Convert a given angle to x-y coordinates of the tip of the dial
 		Return: x-y coordinates
 		'''
-		x2 = 150 + 90*np.cos(theta)
-		y2 = 150 + 90*np.sin(theta)
+		x2 = self.x + self.dial_length*np.cos(theta)
+		y2 = self.y + self.dial_length*np.sin(theta)
 		return x2, y2
 
 
 	def map(self, number):
 		'''
-		Convert a number from 0 to 100, to 0.75*np.pi to 2.25*np.pi
+		Linear maping of a number from Vmin to Vmax, to 0.75*np.pi to 2.25*np.pi
 		Return: the required angle
 		'''
-		slope = (2.25*np.pi - 0.75*np.pi)/(90 - 0)
-		angle = slope*(number-0) + 0.75*np.pi
+		slope = (2.25*np.pi - 0.75*np.pi)/(self.Vmax - self.Vmin)
+		angle = slope*(number-self.Vmin) + 0.75*np.pi
+
 		return angle
 
-	def make_gauge(self):
-		self.canvas = tk.Canvas(self.frame, width=self.width, height=self.height) 				# Create the canvas, for the gauge
-		self.canvas.pack()														# Pack the canvas
-		background = self.canvas.create_image(150, 150, image=self.img) 				# Load the image on the canvas
-		x2,y2 = self.polar2cartesian(self.map(0))
-		self.canvas.create_oval(140,140,160,160, fill='red')
-		self.canvas.create_text(150, 180, 
-				fill="white", 
-				font=("Purisa", 12), 
-				text=self.title)
-		self.line = self.canvas.create_line(150,150,x2,y2, fill="red", width=3) 	# Create the dial line
-
-		# Add the numbers
-		for i in range(10): 	
-			label = i*10
-			x2, y2 = self.polar2cartesian(self.map(label))
-			self.canvas.create_text(x2, y2, 
-				fill="white", 
-				font=("Purisa", 12), 
-				text=str(label))
-		return None
 
 	def set_dial(self, value):
 		'''
 		Method to set the dial line to some value
+		Return: None
 		'''
-		x2,y2 = self.polar2cartesian(self.map(value))
-		self.canvas.coords(self.line, 150, 150, x2,y2)
+		value = self.norm(value)
+		x2,y2 = self.coords( self.map(value) )
+		self.canvas.coords(self.line, self.x, self.y, x2,y2)
+		self.canvas.itemconfigure(self.value_lbl, text=value)
+
 		return None
+
+
+	def norm(self, number):
+		'''
+		Normalize the value within the min and max.
+		Returns the normalized value.
+		'''
+		if number<self.Vmin:
+			number = self.Vmin
+
+		elif number > self.Vmax:
+			number = self.Vmax
+		
+		return number
 
 
 if __name__ == '__main__':
 
 	root = tk.Tk()
 
-	gauge_frame1 = tk.Frame(root)
+	gauge_frame1 = tk.LabelFrame(root, text='hello')
 	gauge_frame1.pack(side=tk.RIGHT)
-	mygauge1 = gaugeApp(gauge_frame1, 0, 100, "speed")
-	#mygauge.set_dial(50)
-	#root.after(2000,lambda: mygauge1.set_dial( random.randint(0,90) ))
-
-	gauge_frame2 = tk.Frame(root)
-	gauge_frame2.pack(side=tk.RIGHT)
-	mygauge2 = gaugeApp(gauge_frame2, 0, 100, "rpm")
-	#mygauge.set_dial(50)
-	#root.after(2000,lambda: mygauge2.set_dial( random.randint(0,90) ))
-
+	mygauge1 = GaugeWidget(gauge_frame1, title="speed", Vmin=20, Vmax=200, value=50)
 
 	def update():
-		mygauge1.set_dial( random.randint(0,90) )
-		mygauge2.set_dial( random.randint(0,90) )
+		mygauge1.set_dial( random.randint(mygauge1.Vmin, mygauge1.Vmax) )
 		root.after(1000, update)
 
 	root.after(1000, update)
