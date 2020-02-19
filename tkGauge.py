@@ -2,6 +2,7 @@ import tkinter as tk
 from PIL import Image, ImageTk
 import numpy as np
 import random
+from scipy.interpolate import interp1d
 
 
 class GaugeWidget:
@@ -18,19 +19,21 @@ class GaugeWidget:
 		value: A float that holds the value of the gauge dial (default is 0, or min).
 	'''
 
+
+	########################################################################## INITIALIZE
 	def __init__(self, master, *args, **kwargs):
 		'''
 		Initialize the gauge
 		'''
 
-		########################################################################## BACKGROUND IMAGE
+		############################### BACKGROUND IMAGE
 
 		# Load the image for the background
 		image = Image.open('Images/template.png')
 		# Get the width and height of the original image
 		width, height = image.size
 
-		########################################################################## KWARGS VARIABLES	
+		############################### KWARGS VARIABLES	
 
 		# Tkinter widget where the gauge chart will be placed
 		self.master  = master
@@ -45,7 +48,7 @@ class GaugeWidget:
 		# Initial value for the dial
 		self.value = kwargs.pop('value', self.Vmin)
 
-		########################################################################## IMAGE RESIZING
+		############################### IMAGE RESIZING
 
 		# Load the background image for the gauge chart
 		image = image.resize((size, size), Image.ANTIALIAS)
@@ -56,7 +59,10 @@ class GaugeWidget:
 		# Define the dial length
 		self.dial_length = int(0.3*size)
 
-		########################################################################## CREATE CANVAS AND CHART
+		############################### CREATE CANVAS AND CHART
+
+		# Create an interpolation object. Could also use numpy.interp(x, [x1,y1], [x2,y2])
+		self.map = interp1d([self.Vmin, self.Vmax], [0.75*np.pi, 2.25*np.pi])
 
 		# Create the canvas, for the gauge
 		self.canvas = tk.Canvas(self.master, 
@@ -70,6 +76,7 @@ class GaugeWidget:
 			self.y)
 
 
+	########################################################################## CREATE THE GAUGE ELEMENTS
 	def make_chart(self, master, x1, y1):
 		'''
 		Assembles the elements in the gauge chart.
@@ -120,6 +127,7 @@ class GaugeWidget:
 		return None
 
 
+	########################################################################## DIAL TIP COORDINATES
 	def coords(self, theta):
 		'''
 		Convert a given angle to x-y coordinates of the tip of the dial
@@ -130,42 +138,17 @@ class GaugeWidget:
 		return x2, y2
 
 
-	def map(self, number):
-		'''
-		Linear maping of a number from Vmin to Vmax, to 0.75*np.pi to 2.25*np.pi
-		Return: the required angle
-		'''
-		slope = (2.25*np.pi - 0.75*np.pi)/(self.Vmax - self.Vmin)
-		angle = slope*(number-self.Vmin) + 0.75*np.pi
-
-		return angle
-
-
+	########################################################################## CHANGE DIAL POSITION
 	def set_dial(self, value):
 		'''
 		Method to set the dial line to some value
 		Return: None
 		'''
-		value = self.norm(value)
 		x2,y2 = self.coords( self.map(value) )
 		self.canvas.coords(self.line, self.x, self.y, x2,y2)
 		self.canvas.itemconfigure(self.value_lbl, text=value)
 
 		return None
-
-
-	def norm(self, number):
-		'''
-		Normalize the value within the min and max.
-		Returns the normalized value.
-		'''
-		if number<self.Vmin:
-			number = self.Vmin
-
-		elif number > self.Vmax:
-			number = self.Vmax
-		
-		return number
 
 
 if __name__ == '__main__':
